@@ -30,6 +30,7 @@ const ctx = canvas.getContext("2d")!;
 let isDrawing = false;
 const lines: Array<MarkerLine> = [];
 let currentThickness = 1;
+let toolPreview: ToolPreview | null = null;
 
 class MarkerLine {
   points: Array<{ x: number; y: number }>;
@@ -59,6 +60,25 @@ class MarkerLine {
   }
 }
 
+class ToolPreview {
+  x: number;
+  y: number;
+  thickness: number;
+
+  constructor(x: number, y: number, thickness: number) {
+    this.x = x;
+    this.y = y;
+    this.thickness = thickness;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.lineWidth = this.thickness;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
 thinButton.addEventListener("click", () => {
   currentThickness = 1;
   thinButton.classList.add("selectedTool");
@@ -82,6 +102,9 @@ canvas.addEventListener("mousemove", (e) => {
     const currentLine = lines[lines.length - 1];
     currentLine.drag(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
+  } else {
+    toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
+    canvas.dispatchEvent(new CustomEvent("tool-moved"));
   }
 });
 
@@ -98,6 +121,19 @@ canvas.addEventListener("drawing-changed", () => {
   lines.forEach((line) => {
     line.display(ctx);
   });
+  if (toolPreview) {
+    toolPreview.draw(ctx);
+  }
+});
+
+canvas.addEventListener("tool-moved", () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  lines.forEach((line) => {
+    line.display(ctx);
+  });
+  if (toolPreview) {
+    toolPreview.draw(ctx);
+  }
 });
 
 clearButton.addEventListener("click", () => {
