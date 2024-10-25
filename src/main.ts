@@ -5,7 +5,6 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 
 document.title = APP_NAME;
 
-// Step 1: Initial non-interactive UI layout
 const titleElement = document.createElement("h1");
 titleElement.textContent = APP_NAME;
 app.appendChild(titleElement);
@@ -16,26 +15,49 @@ canvas.height = 256;
 canvas.id = "myCanvas";
 app.appendChild(canvas);
 
-// Step 2: Simple marker drawing
 const clearButton = document.createElement("button");
 clearButton.textContent = "Clear";
 app.appendChild(clearButton);
 
 const ctx = canvas.getContext("2d")!;
 let isDrawing = false;
-const lines: Array<Array<{ x: number; y: number }>> = [];
+const lines: Array<MarkerLine> = [];
 
-// Step 3: Display list and observer
+class MarkerLine {
+  points: Array<{ x: number; y: number }>;
+
+  constructor(x: number, y: number) {
+    this.points = [{ x, y }];
+  }
+
+  drag(x: number, y: number) {
+    this.points.push({ x, y });
+  }
+
+  display(ctx: CanvasRenderingContext2D) {
+    if (this.points.length === 0) return;
+    ctx.beginPath();
+    this.points.forEach((point, index) => {
+      if (index === 0) {
+        ctx.moveTo(point.x, point.y);
+      } else {
+        ctx.lineTo(point.x, point.y);
+      }
+    });
+    ctx.stroke();
+  }
+}
+
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  lines.push([{ x: e.offsetX, y: e.offsetY }]);
+  const line = new MarkerLine(e.offsetX, e.offsetY);
+  lines.push(line);
 });
 
 canvas.addEventListener("mousemove", (e) => {
-  if (isDrawing) 
-{
+  if (isDrawing) {
     const currentLine = lines[lines.length - 1];
-    currentLine.push({ x: e.offsetX, y: e.offsetY });
+    currentLine.drag(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new CustomEvent("drawing-changed"));
   }
 });
@@ -51,21 +73,9 @@ canvas.addEventListener("mouseout", () => {
 canvas.addEventListener("drawing-changed", () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   lines.forEach((line) => {
-    ctx.beginPath();
-    line.forEach((point, index) => {
-      if (index === 0) 
-        {
-        ctx.moveTo(point.x, point.y);
-      } 
-      else 
-      {
-        ctx.lineTo(point.x, point.y);
-      }
-    });
-    ctx.stroke();
+    line.display(ctx);
   });
 });
-
 
 clearButton.addEventListener("click", () => {
   lines.length = 0;
