@@ -29,6 +29,10 @@ const addStickerButton = document.createElement("button");
 addStickerButton.textContent = "Add Custom Sticker";
 app.appendChild(addStickerButton);
 
+const exportButton = document.createElement("button");
+exportButton.textContent = "Export";
+app.appendChild(exportButton);
+
 let stickerData = ["😊", "🎉", "❤️"];
 const stickerButtons: HTMLButtonElement[] = [];
 
@@ -217,4 +221,30 @@ addStickerButton.addEventListener("click", () => {
     stickerData.push(newSticker);
     createStickerButtons();
   }
+});
+
+exportButton.addEventListener("click", () => {
+  const exportCanvas = document.createElement("canvas");
+  exportCanvas.width = 1024;
+  exportCanvas.height = 1024;
+  const exportCtx = exportCanvas.getContext("2d")!;
+  exportCtx.scale(4, 4);
+
+  lines.forEach((line) => {
+    line.display(exportCtx);
+  });
+  stickers.forEach((sticker) => {
+    sticker.draw(exportCtx);
+  });
+
+  exportCanvas.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "canvas-export.png";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  });
 });
