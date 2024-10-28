@@ -1,6 +1,6 @@
 import "./style.css";
 
-const APP_NAME = "hiiii";
+const APP_NAME = "Charm Canvas";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 document.title = APP_NAME;
 
@@ -14,54 +14,54 @@ canvas.height = 256;
 canvas.id = "myCanvas";
 app.appendChild(canvas);
 
-const thinButton = document.createElement("button");
-thinButton.textContent = "Thin Marker";
-const thickButton = document.createElement("button");
-thickButton.textContent = "Thick Marker";
-app.appendChild(thinButton);
-app.appendChild(thickButton);
+const thinBrushButton = document.createElement("button");
+thinBrushButton.textContent = "Thin Brush";
+const thickBrushButton = document.createElement("button");
+thickBrushButton.textContent = "Thick Brush";
+app.appendChild(thinBrushButton);
+app.appendChild(thickBrushButton);
 
 const clearButton = document.createElement("button");
 clearButton.textContent = "Clear";
 app.appendChild(clearButton);
 
-const addStickerButton = document.createElement("button");
-addStickerButton.textContent = "Add Custom Sticker";
-app.appendChild(addStickerButton);
+const addCharmButton = document.createElement("button");
+addCharmButton.textContent = "Add Custom Charm";
+app.appendChild(addCharmButton);
 
 const exportButton = document.createElement("button");
 exportButton.textContent = "Export";
 app.appendChild(exportButton);
 
-let stickerData = ["😊", "🎉", "❤️"];
-const stickerButtons: HTMLButtonElement[] = [];
+let charmData = ["🌟", "🌈", "💫"];
+const charmButtons: HTMLButtonElement[] = [];
 
-function createStickerButtons() {
-  stickerButtons.forEach(button => app.removeChild(button));
-  stickerButtons.length = 0;
-  stickerData.forEach((emoji) => {
+function createCharmButtons() {
+  charmButtons.forEach(button => app.removeChild(button));
+  charmButtons.length = 0;
+  charmData.forEach((emoji) => {
     const button = document.createElement("button");
     button.textContent = emoji;
     app.appendChild(button);
-    stickerButtons.push(button);
+    charmButtons.push(button);
     button.addEventListener("click", () => {
-      currentSticker = new Sticker(emoji, 0, 0);
+      currentCharm = new Charm(emoji, 0, 0);
       canvas.dispatchEvent(new CustomEvent("tool-moved"));
     });
   });
 }
 
-createStickerButtons();
+createCharmButtons();
 
 const ctx = canvas.getContext("2d")!;
 let isDrawing = false;
-const lines: MarkerLine[] = [];
-const stickers: Sticker[] = [];
-let currentThickness = 1;
+const lines: BrushLine[] = [];
+const charms: Charm[] = [];
+let currentThickness = 2;
 let toolPreview: ToolPreview | null = null;
-let currentSticker: Sticker | null = null;
+let currentCharm: Charm | null = null;
 
-class MarkerLine {
+class BrushLine {
   points: Array<{ x: number; y: number }>;
   thickness: number;
 
@@ -108,7 +108,7 @@ class ToolPreview {
   }
 }
 
-class Sticker {
+class Charm {
   emoji: string;
   x: number;
   y: number;
@@ -125,45 +125,45 @@ class Sticker {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.font = "32px Arial";
+    ctx.font = "40px Arial";
     ctx.fillText(this.emoji, this.x, this.y);
   }
 }
 
-thinButton.addEventListener("click", () => {
-  currentThickness = 1;
-  thinButton.classList.add("selectedTool");
-  thickButton.classList.remove("selectedTool");
+thinBrushButton.addEventListener("click", () => {
+  currentThickness = 2;
+  thinBrushButton.classList.add("selectedTool");
+  thickBrushButton.classList.remove("selectedTool");
 });
 
-thickButton.addEventListener("click", () => {
-  currentThickness = 5;
-  thickButton.classList.add("selectedTool");
-  thinButton.classList.remove("selectedTool");
+thickBrushButton.addEventListener("click", () => {
+  currentThickness = 8;
+  thickBrushButton.classList.add("selectedTool");
+  thinBrushButton.classList.remove("selectedTool");
 });
 
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
-  if (currentSticker) {
-    currentSticker.x = e.offsetX;
-    currentSticker.y = e.offsetY;
+  if (currentCharm) {
+    currentCharm.x = e.offsetX;
+    currentCharm.y = e.offsetY;
   } else {
-    const line = new MarkerLine(e.offsetX, e.offsetY, currentThickness);
+    const line = new BrushLine(e.offsetX, e.offsetY, currentThickness);
     lines.push(line);
   }
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (isDrawing) {
-    if (currentSticker) {
-      currentSticker.drag(e.offsetX, e.offsetY);
+    if (currentCharm) {
+      currentCharm.drag(e.offsetX, e.offsetY);
     } else {
       const currentLine = lines[lines.length - 1];
       currentLine.drag(e.offsetX, e.offsetY);
       canvas.dispatchEvent(new CustomEvent("drawing-changed"));
     }
-  } else if (currentSticker) {
-    currentSticker.drag(e.offsetX, e.offsetY);
+  } else if (currentCharm) {
+    currentCharm.drag(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new CustomEvent("tool-moved"));
   } else {
     toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
@@ -173,9 +173,9 @@ canvas.addEventListener("mousemove", (e) => {
 
 canvas.addEventListener("mouseup", () => {
   isDrawing = false;
-  if (currentSticker) {
-    stickers.push(currentSticker);
-    currentSticker = null;
+  if (currentCharm) {
+    charms.push(currentCharm);
+    currentCharm = null;
   }
 });
 
@@ -201,25 +201,25 @@ canvas.addEventListener("tool-moved", () => {
   if (toolPreview) {
     toolPreview.draw(ctx);
   }
-  stickers.forEach((sticker) => {
-    sticker.draw(ctx);
+  charms.forEach((charm) => {
+    charm.draw(ctx);
   });
-  if (currentSticker) {
-    currentSticker.draw(ctx);
+  if (currentCharm) {
+    currentCharm.draw(ctx);
   }
 });
 
 clearButton.addEventListener("click", () => {
   lines.length = 0;
-  stickers.length = 0;
+  charms.length = 0;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 });
 
-addStickerButton.addEventListener("click", () => {
-  const newSticker = prompt("Enter a new sticker emoji:", "⭐");
-  if (newSticker) {
-    stickerData.push(newSticker);
-    createStickerButtons();
+addCharmButton.addEventListener("click", () => {
+  const newCharm = prompt("Enter a new charm emoji:", "✨");
+  if (newCharm) {
+    charmData.push(newCharm);
+    createCharmButtons();
   }
 });
 
@@ -233,8 +233,8 @@ exportButton.addEventListener("click", () => {
   lines.forEach((line) => {
     line.display(exportCtx);
   });
-  stickers.forEach((sticker) => {
-    sticker.draw(exportCtx);
+  charms.forEach((charm) => {
+    charm.draw(exportCtx);
   });
 
   exportCanvas.toBlob((blob) => {
@@ -242,7 +242,7 @@ exportButton.addEventListener("click", () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "canvas-export.png";
+      a.download = "charm-canvas.png";
       a.click();
       URL.revokeObjectURL(url);
     }
