@@ -60,14 +60,17 @@ const charms: Charm[] = [];
 let currentThickness = 2;
 let toolPreview: ToolPreview | null = null;
 let currentCharm: Charm | null = null;
+let currentColor = getRandomColor();
 
 class BrushLine {
   points: Array<{ x: number; y: number }>;
   thickness: number;
+  color: string;
 
-  constructor(x: number, y: number, thickness: number) {
+  constructor(x: number, y: number, thickness: number, color: string) {
     this.points = [{ x, y }];
     this.thickness = thickness;
+    this.color = color;
   }
 
   drag(x: number, y: number) {
@@ -76,6 +79,7 @@ class BrushLine {
 
   display(ctx: CanvasRenderingContext2D) {
     if (this.points.length === 0) return;
+    ctx.strokeStyle = this.color;
     ctx.lineWidth = this.thickness;
     ctx.beginPath();
     this.points.forEach((point, index) => {
@@ -93,14 +97,17 @@ class ToolPreview {
   x: number;
   y: number;
   thickness: number;
+  color: string;
 
-  constructor(x: number, y: number, thickness: number) {
+  constructor(x: number, y: number, thickness: number, color: string) {
     this.x = x;
     this.y = y;
     this.thickness = thickness;
+    this.color = color;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
+    ctx.strokeStyle = this.color;
     ctx.lineWidth = this.thickness;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.thickness / 2, 0, Math.PI * 2);
@@ -130,14 +137,21 @@ class Charm {
   }
 }
 
+// Helper function to generate a random color
+function getRandomColor() {
+  return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
+}
+
 thinBrushButton.addEventListener("click", () => {
   currentThickness = 2;
+  currentColor = getRandomColor();
   thinBrushButton.classList.add("selectedTool");
   thickBrushButton.classList.remove("selectedTool");
 });
 
 thickBrushButton.addEventListener("click", () => {
   currentThickness = 8;
+  currentColor = getRandomColor();
   thickBrushButton.classList.add("selectedTool");
   thinBrushButton.classList.remove("selectedTool");
 });
@@ -148,7 +162,7 @@ canvas.addEventListener("mousedown", (e) => {
     currentCharm.x = e.offsetX;
     currentCharm.y = e.offsetY;
   } else {
-    const line = new BrushLine(e.offsetX, e.offsetY, currentThickness);
+    const line = new BrushLine(e.offsetX, e.offsetY, currentThickness, currentColor);
     lines.push(line);
   }
 });
@@ -166,7 +180,7 @@ canvas.addEventListener("mousemove", (e) => {
     currentCharm.drag(e.offsetX, e.offsetY);
     canvas.dispatchEvent(new CustomEvent("tool-moved"));
   } else {
-    toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness);
+    toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness, currentColor);
     canvas.dispatchEvent(new CustomEvent("tool-moved"));
   }
 });
