@@ -2,7 +2,6 @@ import "./style.css";
 
 const APP_NAME = "hiiii";
 const app = document.querySelector<HTMLDivElement>("#app")!;
-
 document.title = APP_NAME;
 
 const titleElement = document.createElement("h1");
@@ -26,12 +25,29 @@ const clearButton = document.createElement("button");
 clearButton.textContent = "Clear";
 app.appendChild(clearButton);
 
-const stickerButtons: HTMLButtonElement[] = ["😊", "🎉", "❤️"].map((emoji) => {
-  const button = document.createElement("button");
-  button.textContent = emoji;
-  app.appendChild(button);
-  return button;
-});
+const addStickerButton = document.createElement("button");
+addStickerButton.textContent = "Add Custom Sticker";
+app.appendChild(addStickerButton);
+
+let stickerData = ["😊", "🎉", "❤️"];
+const stickerButtons: HTMLButtonElement[] = [];
+
+function createStickerButtons() {
+  stickerButtons.forEach(button => app.removeChild(button));
+  stickerButtons.length = 0;
+  stickerData.forEach((emoji) => {
+    const button = document.createElement("button");
+    button.textContent = emoji;
+    app.appendChild(button);
+    stickerButtons.push(button);
+    button.addEventListener("click", () => {
+      currentSticker = new Sticker(emoji, 0, 0);
+      canvas.dispatchEvent(new CustomEvent("tool-moved"));
+    });
+  });
+}
+
+createStickerButtons();
 
 const ctx = canvas.getContext("2d")!;
 let isDrawing = false;
@@ -122,13 +138,6 @@ thickButton.addEventListener("click", () => {
   thinButton.classList.remove("selectedTool");
 });
 
-stickerButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    currentSticker = new Sticker(button.textContent || "", 0, 0);
-    canvas.dispatchEvent(new CustomEvent("tool-moved"));
-  });
-});
-
 canvas.addEventListener("mousedown", (e) => {
   isDrawing = true;
   if (currentSticker) {
@@ -200,4 +209,12 @@ clearButton.addEventListener("click", () => {
   lines.length = 0;
   stickers.length = 0;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+addStickerButton.addEventListener("click", () => {
+  const newSticker = prompt("Enter a new sticker emoji:", "⭐");
+  if (newSticker) {
+    stickerData.push(newSticker);
+    createStickerButtons();
+  }
 });
