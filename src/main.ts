@@ -1,9 +1,11 @@
 import "./style.css";
 
+// Constants and Initialization
 const APP_NAME = "Charm Canvas";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 document.title = APP_NAME;
 
+// App Layout
 const titleElement = document.createElement("h1");
 titleElement.textContent = APP_NAME;
 app.appendChild(titleElement);
@@ -14,61 +16,47 @@ canvas.height = 256;
 canvas.id = "myCanvas";
 app.appendChild(canvas);
 
+const ctx = canvas.getContext("2d")!;
+
+// Buttons
 const thinBrushButton = document.createElement("button");
 thinBrushButton.textContent = "Thin Brush";
+
 const thickBrushButton = document.createElement("button");
 thickBrushButton.textContent = "Thick Brush";
-app.appendChild(thinBrushButton);
-app.appendChild(thickBrushButton);
 
 const clearButton = document.createElement("button");
 clearButton.textContent = "Clear";
-app.appendChild(clearButton);
 
 const addCharmButton = document.createElement("button");
 addCharmButton.textContent = "Add Custom Charm";
-app.appendChild(addCharmButton);
 
 const exportButton = document.createElement("button");
 exportButton.textContent = "Export";
-app.appendChild(exportButton);
 
-let charmData = ["🌟", "🌈", "💫"];
-const charmButtons: HTMLButtonElement[] = [];
+const colorPicker = document.createElement("input");
+colorPicker.type = "color";
+colorPicker.value = "#ff0000";
 
-function createCharmButtons() {
-  charmButtons.forEach(button => app.removeChild(button));
-  charmButtons.length = 0;
-  charmData.forEach((emoji) => {
-    const button = document.createElement("button");
-    button.textContent = emoji;
-    app.appendChild(button);
-    charmButtons.push(button);
-    button.addEventListener("click", () => {
-      currentCharm = new Charm(emoji, 0, 0);
-      canvas.dispatchEvent(new CustomEvent("tool-moved"));
-    });
-  });
+app.append(thinBrushButton, thickBrushButton, clearButton, addCharmButton, exportButton, colorPicker);
+
+// Data Models
+interface Point {
+  x: number;
+  y: number;
 }
 
-createCharmButtons();
+interface Drawable {
+  draw(ctx: CanvasRenderingContext2D): void;
+}
 
-const ctx = canvas.getContext("2d")!;
-let isDrawing = false;
-const lines: BrushLine[] = [];
-const charms: Charm[] = [];
-let currentThickness = 2;
-let toolPreview: ToolPreview | null = null;
-let currentCharm: Charm | null = null;
-let currentColor = getRandomColor();
-
-class BrushLine {
-  points: Array<{ x: number; y: number }>;
+class BrushLine implements Drawable {
+  points: Point[] = [];
   thickness: number;
   color: string;
 
   constructor(x: number, y: number, thickness: number, color: string) {
-    this.points = [{ x, y }];
+    this.points.push({ x, y });
     this.thickness = thickness;
     this.color = color;
   }
@@ -77,23 +65,42 @@ class BrushLine {
     this.points.push({ x, y });
   }
 
-  display(ctx: CanvasRenderingContext2D) {
-    if (this.points.length === 0) return;
+  draw(ctx: CanvasRenderingContext2D) {
+    if (this.points.length < 2) return;
     ctx.strokeStyle = this.color;
     ctx.lineWidth = this.thickness;
     ctx.beginPath();
-    this.points.forEach((point, index) => {
-      if (index === 0) {
-        ctx.moveTo(point.x, point.y);
-      } else {
-        ctx.lineTo(point.x, point.y);
-      }
-    });
+    this.points.forEach((point, index) =>
+      index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y)
+    );
     ctx.stroke();
   }
 }
 
-class ToolPreview {
+class Charm implements Drawable {
+  emoji: string;
+  x: number;
+  y: number;
+  isDragging: boolean = false;
+
+  constructor(emoji: string, x: number, y: number) {
+    this.emoji = emoji;
+    this.x = x;
+    this.y = y;
+  }
+
+  drag(x: number, y: number) {
+    this.x = x;
+    this.y = y;
+  }
+
+  draw(ctx: CanvasRenderingContext2D) {
+    ctx.font = "40px Arial";
+    ctx.fillText(this.emoji, this.x, this.y);
+  }
+}
+
+class ToolPreview implements Drawable {
   x: number;
   y: number;
   thickness: number;
@@ -115,125 +122,68 @@ class ToolPreview {
   }
 }
 
-class Charm {
-  emoji: string;
-  x: number;
-  y: number;
+// Application State
+let currentThickness = 2;
+let currentColor = colorPicker.value;
+let lines: BrushLine[] = [];
+let charms: Charm[] = [];
+let currentCharm: Charm | null = null;
+let isDrawing = false;
 
-  constructor(emoji: string, x: number, y: number) {
-    this.emoji = emoji;
-    this.x = x;
-    this.y = y;
-  }
-
-  drag(x: number, y: number) {
-    this.x = x;
-    this.y = y;
-  }
-
-  draw(ctx: CanvasRenderingContext2D) {
-    ctx.font = "40px Arial";
-    ctx.fillText(this.emoji, this.x, this.y);
-  }
+// Helper Functions
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  lines.forEach((line) => line.draw(ctx));
+  charms.forEach((charm) => charm.draw(ctx));
 }
 
-// Helper function to generate a random color
-function getRandomColor() {
-  return `hsl(${Math.floor(Math.random() * 360)}, 100%, 50%)`;
-}
-
-thinBrushButton.addEventListener("click", () => {
-  currentThickness = 2;
-  currentColor = getRandomColor();
-  thinBrushButton.classList.add("selectedTool");
-  thickBrushButton.classList.remove("selectedTool");
-});
-
-thickBrushButton.addEventListener("click", () => {
-  currentThickness = 8;
-  currentColor = getRandomColor();
-  thickBrushButton.classList.add("selectedTool");
-  thinBrushButton.classList.remove("selectedTool");
-});
-
+// Event Listeners
 canvas.addEventListener("mousedown", (e) => {
-  isDrawing = true;
   if (currentCharm) {
-    currentCharm.x = e.offsetX;
-    currentCharm.y = e.offsetY;
+    currentCharm.isDragging = true;
+    currentCharm.drag(e.offsetX, e.offsetY);
   } else {
     const line = new BrushLine(e.offsetX, e.offsetY, currentThickness, currentColor);
     lines.push(line);
+    isDrawing = true;
   }
+  redraw();
 });
 
 canvas.addEventListener("mousemove", (e) => {
   if (isDrawing) {
-    if (currentCharm) {
-      currentCharm.drag(e.offsetX, e.offsetY);
-    } else {
-      const currentLine = lines[lines.length - 1];
-      currentLine.drag(e.offsetX, e.offsetY);
-      canvas.dispatchEvent(new CustomEvent("drawing-changed"));
-    }
-  } else if (currentCharm) {
+    const currentLine = lines[lines.length - 1];
+    currentLine.drag(e.offsetX, e.offsetY);
+  } else if (currentCharm?.isDragging) {
     currentCharm.drag(e.offsetX, e.offsetY);
-    canvas.dispatchEvent(new CustomEvent("tool-moved"));
-  } else {
-    toolPreview = new ToolPreview(e.offsetX, e.offsetY, currentThickness, currentColor);
-    canvas.dispatchEvent(new CustomEvent("tool-moved"));
   }
+  redraw();
 });
 
 canvas.addEventListener("mouseup", () => {
   isDrawing = false;
-  if (currentCharm) {
-    charms.push(currentCharm);
-    currentCharm = null;
-  }
+  if (currentCharm) currentCharm.isDragging = false;
 });
 
-canvas.addEventListener("mouseout", () => {
-  isDrawing = false;
+thinBrushButton.addEventListener("click", () => {
+  currentThickness = 2;
 });
 
-canvas.addEventListener("drawing-changed", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  lines.forEach((line) => {
-    line.display(ctx);
-  });
-  if (toolPreview) {
-    toolPreview.draw(ctx);
-  }
-});
-
-canvas.addEventListener("tool-moved", () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  lines.forEach((line) => {
-    line.display(ctx);
-  });
-  if (toolPreview) {
-    toolPreview.draw(ctx);
-  }
-  charms.forEach((charm) => {
-    charm.draw(ctx);
-  });
-  if (currentCharm) {
-    currentCharm.draw(ctx);
-  }
+thickBrushButton.addEventListener("click", () => {
+  currentThickness = 8;
 });
 
 clearButton.addEventListener("click", () => {
-  lines.length = 0;
-  charms.length = 0;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  lines = [];
+  charms = [];
+  redraw();
 });
 
 addCharmButton.addEventListener("click", () => {
-  const newCharm = prompt("Enter a new charm emoji:", "✨");
-  if (newCharm) {
-    charmData.push(newCharm);
-    createCharmButtons();
+  const emoji = prompt("Enter a new charm emoji:", "✨");
+  if (emoji) {
+    charms.push(new Charm(emoji, 0, 0));
+    redraw();
   }
 });
 
@@ -244,21 +194,20 @@ exportButton.addEventListener("click", () => {
   const exportCtx = exportCanvas.getContext("2d")!;
   exportCtx.scale(4, 4);
 
-  lines.forEach((line) => {
-    line.display(exportCtx);
-  });
-  charms.forEach((charm) => {
-    charm.draw(exportCtx);
-  });
+  lines.forEach((line) => line.draw(exportCtx));
+  charms.forEach((charm) => charm.draw(exportCtx));
 
   exportCanvas.toBlob((blob) => {
     if (blob) {
-      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
+      a.href = URL.createObjectURL(blob);
       a.download = "charm-canvas.png";
       a.click();
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(a.href);
     }
   });
+});
+
+colorPicker.addEventListener("change", () => {
+  currentColor = colorPicker.value;
 });
